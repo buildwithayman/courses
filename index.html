@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CourseVault — Course Management</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ══ SIDEBAR ══ -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-badge">
+        <div class="logo-icon">C</div>
+        <div>
+          <div class="logo-text">CourseVault</div>
+          <div class="logo-sub">Management System</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-label">Main</div>
+      <button class="nav-btn active" onclick="showView('courses')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+        </svg>
+        All Courses
+      </button>
+      <button class="nav-btn" onclick="showView('add')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
+        </svg>
+        Add Course
+      </button>
+
+      <div class="nav-label">Tools</div>
+      <button class="nav-btn" onclick="showView('filter')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <path d="M3 6h18M7 12h10M11 18h2"/>
+        </svg>
+        Filter by ID
+      </button>
+      <button class="nav-btn" onclick="showView('paginate')">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Paginated View
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      FastAPI + Pydantic backend<br>
+      JSON local storage
+    </div>
+  </aside>
+
+  <!-- ══ MAIN ══ -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <span class="topbar-title" id="topbar-title">All Courses</span>
+        <span class="topbar-sub" id="topbar-sub">/ overview</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="btn btn-ghost btn-sm" onclick="refreshData()">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.5 16a9 9 0 1 1-1.4-5"/>
+          </svg>
+          Refresh
+        </button>
+        <button class="btn btn-primary btn-sm" onclick="showView('add')">
+          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          New Course
+        </button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ─── VIEW: ALL COURSES ─── -->
+      <div class="view active" id="view-courses">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Courses</div>
+            <div class="stat-value" id="stat-total">—</div>
+          </div>
+          <div class="stat-card gold">
+            <div class="stat-label">Published</div>
+            <div class="stat-value" id="stat-pub">—</div>
+          </div>
+          <div class="stat-card green">
+            <div class="stat-label">Avg Price</div>
+            <div class="stat-value" id="stat-avg">—</div>
+          </div>
+          <div class="stat-card muted">
+            <div class="stat-label">Categories</div>
+            <div class="stat-value" id="stat-cat">—</div>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <div class="table-header">
+            <h3>Course Catalog</h3>
+            <div class="search-bar">
+              <svg width="14" height="14" fill="none" stroke="#8a8070" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" id="search-input" placeholder="Search title, instructor…" oninput="filterTable()">
+            </div>
+          </div>
+
+          <div id="table-loading" class="loading">
+            <div class="spinner"></div>
+            Loading courses…
+          </div>
+
+          <div id="table-container" style="display:none">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Title</th>
+                  <th>Instructor</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Duration</th>
+                  <th>Status</th>
+                  <th>Tier</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="courses-tbody"></tbody>
+            </table>
+            <div id="empty-state" class="empty-state" style="display:none">
+              <div class="empty-icon">📚</div>
+              <strong>No courses found</strong>
+              <p>Try adjusting your search or add a new course.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── VIEW: ADD / EDIT ─── -->
+      <div class="view" id="view-add">
+        <div class="form-container">
+          <div class="section-title" id="form-title">Add New Course</div>
+          <div class="table-wrap">
+            <div class="modal-body">
+              <div class="form-grid">
+
+                <div class="field full">
+                  <label>Course Title</label>
+                  <input type="text" id="f-title" placeholder="e.g. Advanced Python Mastery" minlength="2" maxlength="100">
+                </div>
+
+                <div class="field">
+                  <label>Instructor</label>
+                  <input type="text" id="f-instructor" placeholder="John Doe">
+                </div>
+
+                <div class="field">
+                  <label>Category</label>
+                  <input type="text" id="f-category" placeholder="e.g. programming">
+                </div>
+
+                <div class="field">
+                  <label>Price ($)</label>
+                  <input type="number" id="f-price" placeholder="0.01 – 1000" min="0.01" max="1000" step="0.01">
+                </div>
+
+                <div class="field">
+                  <label>Duration (hours)</label>
+                  <input type="number" id="f-duration" placeholder="1 – 1000" min="1" max="1000" step="1">
+                </div>
+
+                <div class="field">
+                  <label>Discount (%)</label>
+                  <input type="number" id="f-discount" placeholder="Optional, 0–100" min="0" max="100" step="0.1">
+                  <span class="hint">Leave blank for no discount</span>
+                </div>
+
+                <div class="field">
+                  <label>Published</label>
+                  <div class="toggle-wrap">
+                    <label class="toggle">
+                      <input type="checkbox" id="f-published" checked>
+                      <div class="toggle-track"></div>
+                      <div class="toggle-thumb"></div>
+                    </label>
+                    <span class="toggle-label" id="pub-label">Published</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div class="modal-foot">
+              <button class="btn btn-primary" onclick="submitForm()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path d="M20 6L9 17l-5-5"/>
+                </svg>
+                <span id="form-btn-text">Save Course</span>
+              </button>
+              <button class="btn btn-ghost" onclick="resetForm(); showView('courses')">Cancel</button>
+              <input type="hidden" id="f-edit-id">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── VIEW: FILTER ─── -->
+      <div class="view" id="view-filter">
+        <div class="section-title">Filter by ID</div>
+        <div class="filter-card">
+          <h3>Lookup Course</h3>
+          <div class="filter-row">
+            <div class="field" style="flex:1">
+              <label>Course ID</label>
+              <input type="number" id="filter-id" placeholder="Enter numeric ID…" min="1">
+            </div>
+            <button class="btn btn-primary" onclick="runFilter()">Lookup</button>
+            <button class="btn btn-ghost" onclick="clearFilter()">Clear</button>
+          </div>
+        </div>
+        <div class="result-box" id="filter-result" style="display:none">
+          <div class="table-header" style="border-bottom:none"><h3>Result</h3></div>
+          <div id="filter-detail"></div>
+        </div>
+      </div>
+
+      <!-- ─── VIEW: PAGINATE ─── -->
+      <div class="view" id="view-paginate">
+        <div class="section-title">Paginated View</div>
+        <div class="pag-controls">
+          <div class="field">
+            <label>Page</label>
+            <input type="number" id="pag-page" value="1" min="1" style="width:80px">
+          </div>
+          <div class="field">
+            <label>Per Page</label>
+            <input type="number" id="pag-limit" value="5" min="1" max="100" style="width:80px">
+          </div>
+          <button class="btn btn-primary" onclick="runPaginate()">Load</button>
+        </div>
+        <div class="table-wrap" id="pag-result" style="display:none">
+          <div class="table-header">
+            <h3 id="pag-meta">—</h3>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th><th>Title</th><th>Instructor</th>
+                <th>Category</th><th>Price</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="pag-tbody"></tbody>
+          </table>
+          <div class="pagination" id="pag-pagination"></div>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+
+  <!-- ══ TOAST CONTAINER ══ -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
