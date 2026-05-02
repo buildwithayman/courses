@@ -49,5 +49,4 @@ tzdata==2025.3
 urllib3==2.6.3
 uvicorn==0.44.0
 python-dotenv
-psycopg2-binarypython-dotenv
 psycopg2-binary
