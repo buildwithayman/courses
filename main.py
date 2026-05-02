@@ -4,11 +4,15 @@ from routers import route
 
 app=FastAPI()
 
-
 #connecting our frontend with backend
 app.add_middleware( 
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:5500"], #only this frontend can call the api/backend sirf yehi frontend ki url accept/allow karega api use krne ke liye
+    allow_origins=[
+        "http://127.0.0.1:5500",
+        "http://localhost:5500",
+        "https://buildwithayman.github.io/courses",
+        "https://buildwithayman.github.io",
+    ], #only these frontend can call the api/backend sirf yehi frontend ki url accept/allow karega api use krne ke liye
     allow_credentials=True, #backend the sari cheze frontend url use krskta h
     allow_methods=["*"],
     allow_headers=["*"] #frontend request ke sath-sath kon se extra infomation backed ko bhejna h voh headers store karata h
@@ -39,3 +43,7 @@ app.include_router(route)
 #connecting to database
 #create_engine=vscode and database(postgressql) ko connect krta h 
 #vscode/client ne 1 req bheji sql/db me gayi ,sql se response aya vscode me =this is called one session 
+
+
+
+
