@@ -47,7 +47,18 @@ async function apiFetch(path, opts = {}) {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail || 'Request failed');
+    // FastAPI validation errors return detail as an array of objects
+    // e.g. [{ loc: [...], msg: "...", type: "..." }]
+    let msg;
+    if (Array.isArray(err.detail)) {
+      msg = err.detail.map(e => {
+        const field = e.loc ? e.loc[e.loc.length - 1] : 'field';
+        return `${field}: ${e.msg}`;
+      }).join('\n');
+    } else {
+      msg = err.detail || 'Request failed';
+    }
+    throw new Error(msg);
   }
   return res.json();
 }
@@ -56,15 +67,17 @@ async function apiFetch(path, opts = {}) {
    LOAD & RENDER ALL COURSES
 ════════════════════════════════════ */
 async function loadCourses() {
-  document.getElementById('table-loading').style.display = 'flex';
-  document.getElementById('table-container').style.display = 'none';
+  const loadingEl = document.getElementById('table-loading');
+  const containerEl = document.getElementById('table-container');
+  loadingEl.style.display = 'flex';
+  containerEl.style.display = 'none';
   try {
     allCourses = await apiFetch('/data');
     renderStats(allCourses);
-    renderTable(allCourses);
+    renderCards(allCourses);
   } catch (e) {
     toast('Failed to load: ' + e.message, 'error');
-    document.getElementById('table-loading').style.display = 'none';
+    loadingEl.style.display = 'none';
   }
 }
 
@@ -72,65 +85,95 @@ function renderStats(data) {
   document.getElementById('stat-total').textContent = data.length;
   document.getElementById('stat-pub').textContent = data.filter(c => c.is_published).length;
   const avg = data.length
-    ? '$' + (data.reduce((s, c) => s + c.price, 0) / data.length).toFixed(0)
+    ? '₹' + (data.reduce((s, c) => s + c.price, 0) / data.length).toFixed(0)
     : '—';
   document.getElementById('stat-avg').textContent = avg;
   document.getElementById('stat-cat').textContent = new Set(data.map(c => c.category)).size || '—';
 }
 
 function priceTier(price) {
-  if (price < 500)  return ['Budget',   'badge-budget'];
-  if (price < 1000) return ['Mid-range','badge-mid'];
-  return ['Premium', 'badge-premium'];
+  if (price < 500)  return ['Budget',    'badge-budget',   'stripe-budget'];
+  if (price < 10000) return ['Mid-Range', 'badge-mid',      'stripe-mid'];
+  return              ['Premium',  'badge-premium',  'stripe-premium'];
 }
 
-function renderTable(data) {
+function renderCards(data) {
   document.getElementById('table-loading').style.display = 'none';
-  document.getElementById('table-container').style.display = 'block';
-  const tbody = document.getElementById('courses-tbody');
+  const containerEl = document.getElementById('table-container');
+  containerEl.style.display = 'block';
+
+  const grid = document.getElementById('courses-grid');
   const empty = document.getElementById('empty-state');
 
   if (!data.length) {
-    tbody.innerHTML = '';
+    grid.innerHTML = '';
     empty.style.display = 'block';
     return;
   }
   empty.style.display = 'none';
 
-  tbody.innerHTML = data.map(c => {
-    const [tier, tierClass] = priceTier(c.price);
-    const disc = c.discount_percent != null
-      ? `<span style="font-size:11px;color:var(--success)"> -${c.discount_percent}%</span>`
+  grid.innerHTML = data.map(c => {
+    const [tier, tierBadge, stripeClass] = priceTier(c.price);
+    const discTag = c.discount_percent != null
+      ? `<span class="discount-tag">-${c.discount_percent}%</span>`
       : '';
+    const pubBadge = c.is_published
+      ? `<span class="badge badge-published">● Published</span>`
+      : `<span class="badge badge-unpublished">○ Draft</span>`;
+
     return `
-      <tr>
-        <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">#${c.id}</span></td>
-        <td style="max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(c.title)}</td>
-        <td>${esc(c.instructor)}</td>
-        <td style="text-transform:capitalize">${esc(c.category)}</td>
-        <td>$${c.price.toFixed(2)}${disc}</td>
-        <td>${c.duration_hours}h</td>
-        <td><span class="badge ${c.is_published ? 'badge-published' : 'badge-unpublished'}">${c.is_published ? 'Published' : 'Draft'}</span></td>
-        <td><span class="badge ${tierClass}">${tier}</span></td>
-        <td>
-          <div class="action-group">
-            <button class="btn btn-ghost btn-sm" onclick="editCourse(${c.id})">Edit</button>
-            <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.id})">Delete</button>
+      <div class="course-card">
+        <div class="card-stripe ${stripeClass}"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <div>
+              <div class="card-title">${esc(c.title)}</div>
+              <div class="card-instructor">
+                <svg width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+                </svg>
+                ${esc(c.instructor)}
+              </div>
+            </div>
+            <div class="card-id">#${c.id}</div>
           </div>
-        </td>
-      </tr>`;
+
+          <div class="card-meta">
+            <div class="card-meta-item">
+              <div class="meta-label">Price</div>
+              <div class="meta-value price-value">₹${c.price.toFixed(2)}${discTag}</div>
+            </div>
+            <div class="card-meta-item">
+              <div class="meta-label">Duration</div>
+              <div class="meta-value">${c.duration_hours}h</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <div class="card-badges">
+            ${pubBadge}
+            <span class="badge ${tierBadge}">${tier}</span>
+            <span class="badge badge-category">${esc(c.category)}</span>
+          </div>
+          <div class="card-actions">
+            <button class="btn btn-ghost btn-sm" onclick="editCourse(${c.id})">Edit</button>
+            <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.id})">Del</button>
+          </div>
+        </div>
+      </div>`;
   }).join('');
 }
 
 function filterTable() {
   const q = document.getElementById('search-input').value.toLowerCase();
-  if (!q) { renderTable(allCourses); return; }
+  if (!q) { renderCards(allCourses); return; }
   const filtered = allCourses.filter(c =>
     c.title.toLowerCase().includes(q) ||
     c.instructor.toLowerCase().includes(q) ||
     c.category.toLowerCase().includes(q)
   );
-  renderTable(filtered);
+  renderCards(filtered);
 }
 
 function refreshData() {
@@ -169,22 +212,16 @@ async function submitForm() {
   const discount   = discRaw !== '' ? parseFloat(discRaw) : null;
   const editId     = document.getElementById('f-edit-id').value;
 
-  if (!title      || title.length < 2)              { toast('Title must be at least 2 characters', 'error'); return; }
-  if (!instructor || instructor.length < 2)          { toast('Instructor name required', 'error'); return; }
-  if (!category   || category.length < 2)            { toast('Category required', 'error'); return; }
-  if (!price      || price <= 0 || price > 1000)     { toast('Price must be between 0.01 and 1000', 'error'); return; }
-  if (!duration   || duration <= 0 || duration > 1000) { toast('Duration must be between 1 and 1000', 'error'); return; }
+  if (!title      || title.length < 2)               { toast('Title must be at least 2 characters', 'error'); return; }
+  if (!instructor || instructor.length < 2)           { toast('Instructor name required', 'error'); return; }
+  if (!category   || category.length < 2)             { toast('Category required', 'error'); return; }
+  if (!price || price < 0.01 || price > 100000) { toast('Price must be between ₹0.01 and ₹1,00,000', 'error'); return; }
+  if (!duration   || duration <= 0 || duration > 1000){ toast('Duration must be between 1 and 1000', 'error'); return; }
   if (!published  && discount && discount > 0)        { toast('Unpublished courses cannot have a discount', 'error'); return; }
 
   const payload = {
-    id: null,
-    title,
-    instructor,
-    category,
-    price,
-    duration_hours: duration,
-    is_published: published,
-    discount_percent: discount,
+    title, instructor, category, price,
+    duration_hours: duration, is_published: published, discount_percent: discount,
   };
 
   try {
@@ -263,14 +300,14 @@ async function runFilter() {
         <div class="detail-cell"><div class="dk">Instructor</div><div class="dv">${esc(c.instructor)}</div></div>
         <div class="detail-cell"><div class="dk">Category</div><div class="dv" style="text-transform:capitalize">${esc(c.category)}</div></div>
         <div class="detail-cell"><div class="dk">Status</div><div class="dv">
-          <span class="badge ${c.is_published ? 'badge-published' : 'badge-unpublished'}">${c.is_published ? 'Published' : 'Draft'}</span>
+          <span class="badge ${c.is_published ? 'badge-published' : 'badge-unpublished'}">${c.is_published ? '● Published' : '○ Draft'}</span>
         </div></div>
-        <div class="detail-cell"><div class="dk">Price</div><div class="dv">$${c.price.toFixed(2)}</div></div>
+        <div class="detail-cell"><div class="dk">Price</div><div class="dv" style="color:var(--cyan)">₹${c.price.toFixed(2)}</div></div>
         <div class="detail-cell"><div class="dk">Duration</div><div class="dv">${c.duration_hours}h</div></div>
-        <div class="detail-cell"><div class="dk">Discount</div><div class="dv">${c.discount_percent != null ? c.discount_percent + '%' : 'None'}</div></div>
+        <div class="detail-cell"><div class="dk">Discount</div><div class="dv">${c.discount_percent != null ? c.discount_percent + '%' : '—'}</div></div>
       </div>
-      <div style="padding:14px 20px;display:flex;gap:10px">
-        <button class="btn btn-primary btn-sm" onclick="editCourse(${c.id})">Edit this course</button>
+      <div style="padding:14px 20px;display:flex;gap:8px;background:var(--bg2);border-top:1px solid var(--border)">
+        <button class="btn btn-primary btn-sm" onclick="editCourse(${c.id})">Edit this Course</button>
         <button class="btn btn-danger btn-sm" onclick="deleteCourse(${c.id})">Delete</button>
       </div>`;
   } catch (e) {
@@ -300,16 +337,16 @@ async function runPaginate() {
 
     const tbody = document.getElementById('pag-tbody');
     if (!data.Data.length) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted)">No data on this page</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--text3)">No data on this page</td></tr>`;
     } else {
       tbody.innerHTML = data.Data.map(c => `
         <tr>
-          <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--muted)">#${c.id}</span></td>
+          <td><span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text3)">#${c.id}</span></td>
           <td>${esc(c.title)}</td>
-          <td>${esc(c.instructor)}</td>
-          <td style="text-transform:capitalize">${esc(c.category)}</td>
-          <td>$${c.price.toFixed(2)}</td>
-          <td><span class="badge ${c.is_published ? 'badge-published' : 'badge-unpublished'}">${c.is_published ? 'Published' : 'Draft'}</span></td>
+          <td style="color:var(--text2)">${esc(c.instructor)}</td>
+          <td style="text-transform:capitalize;color:var(--text2)">${esc(c.category)}</td>
+          <td style="color:var(--cyan);font-weight:600">₹${c.price.toFixed(2)}</td>
+          <td><span class="badge ${c.is_published ? 'badge-published' : 'badge-unpublished'}">${c.is_published ? '● Published' : '○ Draft'}</span></td>
         </tr>`).join('');
     }
 

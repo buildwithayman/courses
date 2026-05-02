@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>CourseVault — Course Management</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Mono:wght@300;400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -17,7 +17,7 @@
         <div class="logo-icon">C</div>
         <div>
           <div class="logo-text">CourseVault</div>
-          <div class="logo-sub">Management System</div>
+          <div class="logo-sub">Management System by Ayman</div>
         </div>
       </div>
     </div>
@@ -25,13 +25,13 @@
     <nav class="sidebar-nav">
       <div class="nav-label">Main</div>
       <button class="nav-btn active" onclick="showView('courses')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
         </svg>
         All Courses
       </button>
       <button class="nav-btn" onclick="showView('add')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>
         </svg>
         Add Course
@@ -39,13 +39,13 @@
 
       <div class="nav-label">Tools</div>
       <button class="nav-btn" onclick="showView('filter')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <path d="M3 6h18M7 12h10M11 18h2"/>
         </svg>
         Filter by ID
       </button>
       <button class="nav-btn" onclick="showView('paginate')">
-        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
           <rect x="3" y="3" width="7" height="7" rx="1"/>
           <rect x="14" y="3" width="7" height="7" rx="1"/>
           <rect x="3" y="14" width="7" height="7" rx="1"/>
@@ -56,8 +56,8 @@
     </nav>
 
     <div class="sidebar-footer">
-      FastAPI + Pydantic backend<br>
-      JSON local storage
+      <span></span>FastAPI + Pydantic backend<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;SQL Database
     </div>
   </aside>
 
@@ -72,14 +72,14 @@
       </div>
       <div class="topbar-actions">
         <button class="btn btn-ghost btn-sm" onclick="refreshData()">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
             <polyline points="23 4 23 10 17 10"/>
             <path d="M20.5 16a9 9 0 1 1-1.4-5"/>
           </svg>
           Refresh
         </button>
         <button class="btn btn-primary btn-sm" onclick="showView('add')">
-          <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <path d="M12 5v14M5 12h14"/>
           </svg>
           New Course
@@ -92,6 +92,8 @@
 
       <!-- ─── VIEW: ALL COURSES ─── -->
       <div class="view active" id="view-courses">
+
+        <!-- Stats -->
         <div class="stats-row">
           <div class="stat-card">
             <div class="stat-label">Total Courses</div>
@@ -111,46 +113,33 @@
           </div>
         </div>
 
-        <div class="table-wrap">
-          <div class="table-header">
+        <!-- Loading -->
+        <div id="table-loading" class="loading">
+          <div class="spinner"></div>
+          Loading courses…
+        </div>
+
+        <!-- Cards Container -->
+        <div id="table-container" style="display:none">
+          <div class="cards-header">
             <h3>Course Catalog</h3>
             <div class="search-bar">
-              <svg width="14" height="14" fill="none" stroke="#8a8070" stroke-width="2" viewBox="0 0 24 24">
+              <svg width="13" height="13" fill="none" stroke="#4a5568" stroke-width="2" viewBox="0 0 24 24">
                 <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
               </svg>
               <input type="text" id="search-input" placeholder="Search title, instructor…" oninput="filterTable()">
             </div>
           </div>
 
-          <div id="table-loading" class="loading">
-            <div class="spinner"></div>
-            Loading courses…
-          </div>
+          <div class="courses-grid" id="courses-grid"></div>
 
-          <div id="table-container" style="display:none">
-            <table>
-              <thead>
-                <tr>
-                  <th>ID</th>
-                  <th>Title</th>
-                  <th>Instructor</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Duration</th>
-                  <th>Status</th>
-                  <th>Tier</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody id="courses-tbody"></tbody>
-            </table>
-            <div id="empty-state" class="empty-state" style="display:none">
-              <div class="empty-icon">📚</div>
-              <strong>No courses found</strong>
-              <p>Try adjusting your search or add a new course.</p>
-            </div>
+          <div id="empty-state" class="empty-state" style="display:none">
+            <div class="empty-icon">📚</div>
+            <strong>No courses found</strong>
+            <p>Try adjusting your search or add a new course.</p>
           </div>
         </div>
+
       </div>
 
       <!-- ─── VIEW: ADD / EDIT ─── -->
@@ -177,8 +166,8 @@
                 </div>
 
                 <div class="field">
-                  <label>Price ($)</label>
-                  <input type="number" id="f-price" placeholder="0.01 – 1000" min="0.01" max="1000" step="0.01">
+                  <label>Price (₹)</label>
+                  <input type="number" id="f-price" placeholder="0.01 – 1,00,000" min="0.01" max="100000" step="0.01">
                 </div>
 
                 <div class="field">
@@ -209,7 +198,7 @@
 
             <div class="modal-foot">
               <button class="btn btn-primary" onclick="submitForm()">
-                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
                   <path d="M20 6L9 17l-5-5"/>
                 </svg>
                 <span id="form-btn-text">Save Course</span>
