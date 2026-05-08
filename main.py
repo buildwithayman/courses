@@ -9,9 +9,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://127.0.0.1:5500",
-        "http://localhost:5500",
-        "https://buildwithayman.github.io/courses",
-        "https://buildwithayman.github.io",
+        "http://localhost:5500"
     ], #only these frontend can call the api/backend sirf yehi frontend ki url accept/allow karega api use krne ke liye
     allow_credentials=True, #backend the sari cheze frontend url use krskta h
     allow_methods=["*"],
